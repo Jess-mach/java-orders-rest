@@ -104,15 +104,16 @@ public class ProdutoServiceTest {
     void testSalvar() {
         // Arrange
         Produto novoProduto = new Produto("Novo Produto", "Nova descrição", new BigDecimal("29.90"), 20);
-        when(produtoRepository.save(any(Produto.class))).thenReturn(produto);
+        when(produtoRepository.save(any(Produto.class))).thenReturn(
+                new Produto(3L, "Novo Produto", "Nova descrição", new BigDecimal("29.90"), 20));
 
         // Act
         Produto produtoSalvo = produtoService.salvar(novoProduto);
 
         // Assert
         assertNotNull(produtoSalvo);
-        assertEquals(produto.getId(), produtoSalvo.getId());
-        assertEquals(produto.getNome(), produtoSalvo.getNome());
+        assertEquals(3L, produtoSalvo.getId());
+        assertEquals(novoProduto.getNome(), produtoSalvo.getNome());
         verify(produtoRepository, times(1)).save(novoProduto);
     }
 
@@ -123,7 +124,11 @@ public class ProdutoServiceTest {
         Produto produtoAtualizado = new Produto("Produto Atualizado", "Descrição atualizada", new BigDecimal("109.90"), 15);
 
         when(produtoRepository.findById(1L)).thenReturn(Optional.of(produto));
-        when(produtoRepository.save(any(Produto.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(produtoRepository.save(any(Produto.class))).thenAnswer(invocation -> {
+            Produto p = invocation.getArgument(0);
+            p.setId(1L);
+            return p;
+        });
 
         // Act
         Produto resultado = produtoService.atualizar(1L, produtoAtualizado);
@@ -160,4 +165,26 @@ public class ProdutoServiceTest {
     void testAtualizarEstoque() {
         // Arrange
         when(produtoRepository.findById(1L)).thenReturn(Optional.of(produto));
-        when(produto/**
+        when(produtoRepository.save(any(Produto.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        produtoService.atualizarEstoque(1L, 3);
+
+        // Assert
+        assertEquals(7, produto.getQuantidadeEstoque());
+        verify(produtoRepository, times(1)).findById(1L);
+        verify(produtoRepository, times(1)).save(produto);
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção ao tentar reduzir estoque para quantidade negativa")
+    void testAtualizarEstoqueQuantidadeInsuficiente() {
+        // Arrange
+        when(produtoRepository.findById(1L)).thenReturn(Optional.of(produto));
+
+        // Act & Assert
+        assertThrows(RuntimeException.class, () -> produtoService.atualizarEstoque(1L, 15));
+        verify(produtoRepository, times(1)).findById(1L);
+        verify(produtoRepository, never()).save(any(Produto.class));
+    }
+}
