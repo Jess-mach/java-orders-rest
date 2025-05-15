@@ -34,9 +34,6 @@ public class PedidoServiceTest {
     @Mock
     private ProdutoService produtoService;
 
-    @Mock
-    private ItemPedidoService itemPedidoService;
-
     @InjectMocks
     private PedidoService pedidoService;
 
@@ -90,6 +87,8 @@ public class PedidoServiceTest {
         assertNotNull(pedidoRetornado);
         assertEquals(pedido.getId(), pedidoRetornado.getId());
         assertEquals(pedido.getCliente(), pedidoRetornado.getCliente());
+        assertEquals(1, pedidoRetornado.getItens().size());
+        assertEquals(itemPedido.getId(), pedidoRetornado.getItens().get(0).getId());
         verify(pedidoRepository, times(1)).findById(1L);
     }
 
@@ -121,7 +120,7 @@ public class PedidoServiceTest {
     }
 
     @Test
-    @DisplayName("Deve salvar um pedido")
+    @DisplayName("Deve salvar um pedido com seus itens")
     void testSalvar() {
         // Arrange
         Pedido novoPedido = new Pedido();
@@ -145,6 +144,7 @@ public class PedidoServiceTest {
         assertNotNull(pedidoSalvo);
         assertEquals(pedido.getId(), pedidoSalvo.getId());
         verify(pedidoRepository, times(1)).save(novoPedido);
+        verify(produtoService, times(1)).buscarPorId(eq(1L));
         verify(produtoService, times(1)).atualizarEstoque(eq(1L), eq(2));
     }
 
@@ -163,11 +163,52 @@ public class PedidoServiceTest {
     }
 
     @Test
+    @DisplayName("Deve atualizar um pedido com novos itens")
+    void testAtualizarComNovosItens() {
+        // Arrange
+        Pedido pedidoAtualizado = new Pedido();
+        pedidoAtualizado.setCliente("Cliente Atualizado");
+        pedidoAtualizado.setObservacao("Observação atualizada");
+
+        Produto produtoExistente = new Produto(2L, "Produto 2", "Descrição 2", new BigDecimal("29.90"), 15);
+        ItemPedido novoItem = new ItemPedido();
+        novoItem.setProduto(produtoExistente);
+        novoItem.setQuantidade(3);
+
+        pedidoAtualizado.getItens().add(novoItem);
+
+        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedido));
+        when(produtoService.buscarPorId(2L)).thenReturn(produtoExistente);
+        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        Pedido resultado = pedidoService.atualizar(1L, pedidoAtualizado);
+
+        // Assert
+        assertNotNull(resultado);
+        assertEquals("Cliente Atualizado", resultado.getCliente());
+        assertEquals("Observação atualizada", resultado.getObservacao());
+        assertEquals(1, resultado.getItens().size());
+        assertEquals(2L, resultado.getItens().get(0).getProduto().getId());
+        assertEquals(3, resultado.getItens().get(0).getQuantidade());
+
+        verify(pedidoRepository, times(1)).findById(1L);
+        verify(produtoService, times(1)).buscarPorId(eq(2L));
+        verify(produtoService, times(1)).salvar(eq(produto));
+        verify(produtoService, times(1)).atualizarEstoque(eq(2L), eq(3));
+        verify(pedidoRepository, times(1)).save(any(Pedido.class));
+    }
+
+    @Test
     @DisplayName("Deve atualizar o status de um pedido")
     void testAtualizarStatus() {
         // Arrange
         when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedido));
-        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocation -> {
+            Pedido p = invocation.getArgument(0);
+            p.setStatus(Pedido.StatusPedido.APROVADO);
+            return p;
+        });
 
         // Act
         Pedido resultado = pedidoService.atualizarStatus(1L, Pedido.StatusPedido.APROVADO);
@@ -194,7 +235,7 @@ public class PedidoServiceTest {
     }
 
     @Test
-    @DisplayName("Deve excluir um pedido pendente")
+    @DisplayName("Deve excluir um pedido pendente e restaurar o estoque")
     void testExcluir() {
         // Arrange
         when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedido));
