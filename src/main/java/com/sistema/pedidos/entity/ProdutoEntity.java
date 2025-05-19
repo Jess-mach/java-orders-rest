@@ -1,4 +1,4 @@
-package com.sistema.pedidos.model;
+package com.sistema.pedidos.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -9,7 +9,7 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "produtos")
-public class Produto {
+public class ProdutoEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,17 +32,17 @@ public class Produto {
     private Integer quantidadeEstoque;
 
     // Construtores
-    public Produto() {
+    public ProdutoEntity() {
     }
 
-    public Produto(String nome, String descricao, BigDecimal preco, Integer quantidadeEstoque) {
+    public ProdutoEntity(String nome, String descricao, BigDecimal preco, Integer quantidadeEstoque) {
         this.nome = nome;
         this.descricao = descricao;
         this.preco = preco;
         this.quantidadeEstoque = quantidadeEstoque;
     }
 
-    public Produto(Long id, String nome, String descricao, BigDecimal preco, Integer quantidadeEstoque) {
+    public ProdutoEntity(Long id, String nome, String descricao, BigDecimal preco, Integer quantidadeEstoque) {
         this.id = id;
         this.nome = nome;
         this.descricao = descricao;
@@ -96,8 +96,8 @@ public class Produto {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        Produto produto = (Produto) o;
-        return Objects.equals(id, produto.id);
+        ProdutoEntity produtoEntity = (ProdutoEntity) o;
+        return Objects.equals(id, produtoEntity.id);
     }
 
     @Override

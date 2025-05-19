@@ -1,6 +1,6 @@
 # Sistema de Pedidos
 
-Este é um sistema CRUD completo para gerenciamento de pedidos, itens de pedidos e produtos.
+Este é um sistema CRUD completo para gerenciamento de pedidoEntities, itens de pedidoEntities e produtoEntities.
 
 ## Tecnologias Utilizadas
 

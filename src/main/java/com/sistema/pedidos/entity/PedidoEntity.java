@@ -1,4 +1,4 @@
-package com.sistema.pedidos.model;
+package com.sistema.pedidos.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -12,7 +12,7 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "pedidos")
-public class Pedido {
+public class PedidoEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,27 +36,29 @@ public class Pedido {
     @Column(nullable = false)
     private StatusPedido status;
 
-    @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ItemPedido> itens = new ArrayList<>();
+    // Na classe Pedido
+    @OneToMany(fetch = FetchType.LAZY)  // Removendo cascade
+    @JoinColumn(name = "pedido_id", referencedColumnName = "id", insertable = false, updatable = false)
+    private List<ItemPedidoEntity> itens = new ArrayList<>();
 
     public enum StatusPedido {
         PENDENTE, APROVADO, CANCELADO, ENTREGUE
     }
 
     // Construtores
-    public Pedido() {
+    public PedidoEntity() {
         this.dataPedido = LocalDateTime.now();
         this.valorTotal = BigDecimal.ZERO;
         this.status = StatusPedido.PENDENTE;
     }
 
-    public Pedido(String cliente, String observacao) {
+    public PedidoEntity(String cliente, String observacao) {
         this();
         this.cliente = cliente;
         this.observacao = observacao;
     }
 
-    public Pedido(Long id, String cliente, LocalDateTime dataPedido, String observacao, BigDecimal valorTotal, StatusPedido status) {
+    public PedidoEntity(Long id, String cliente, LocalDateTime dataPedido, String observacao, BigDecimal valorTotal, StatusPedido status) {
         this.id = id;
         this.cliente = cliente;
         this.dataPedido = dataPedido;
@@ -66,21 +68,21 @@ public class Pedido {
     }
 
     // Métodos para gerenciar os itens do pedido
-    public void adicionarItem(ItemPedido item) {
+    public void adicionarItem(ItemPedidoEntity item) {
         itens.add(item);
-        item.setPedido(this);
+        item.setPedidoId(this.id);
         recalcularValorTotal();
     }
 
-    public void removerItem(ItemPedido item) {
+    public void removerItem(ItemPedidoEntity item) {
         itens.remove(item);
-        item.setPedido(null);
+        item.setPedidoId(null);
         recalcularValorTotal();
     }
 
     public void recalcularValorTotal() {
         valorTotal = itens.stream()
-                .map(ItemPedido::getValorTotal)
+                .map(ItemPedidoEntity::getValorTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
@@ -133,11 +135,11 @@ public class Pedido {
         this.status = status;
     }
 
-    public List<ItemPedido> getItens() {
+    public List<ItemPedidoEntity> getItens() {
         return itens;
     }
 
-    public void setItens(List<ItemPedido> itens) {
+    public void setItens(List<ItemPedidoEntity> itens) {
         this.itens = itens;
         recalcularValorTotal();
     }
@@ -147,8 +149,8 @@ public class Pedido {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        Pedido pedido = (Pedido) o;
-        return Objects.equals(id, pedido.id);
+        PedidoEntity pedidoEntity = (PedidoEntity) o;
+        return Objects.equals(id, pedidoEntity.id);
     }
 
     @Override

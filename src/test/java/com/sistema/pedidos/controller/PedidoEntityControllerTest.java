@@ -1,10 +1,10 @@
 package com.sistema.pedidos.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sistema.pedidos.entity.ItemPedidoEntity;
+import com.sistema.pedidos.entity.PedidoEntity;
+import com.sistema.pedidos.entity.ProdutoEntity;
 import com.sistema.pedidos.exception.ResourceNotFoundException;
-import com.sistema.pedidos.model.ItemPedido;
-import com.sistema.pedidos.model.Pedido;
-import com.sistema.pedidos.model.Produto;
 import com.sistema.pedidos.service.PedidoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,7 +17,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -29,7 +28,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(PedidoController.class)
-public class PedidoControllerTest {
+public class PedidoEntityControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -40,7 +39,7 @@ public class PedidoControllerTest {
     @MockBean
     private PedidoService pedidoService;
 
-    private Pedido pedido;
+    private PedidoEntity pedidoEntity;
     private LocalDateTime dataPedido;
 
     @BeforeEach
@@ -48,25 +47,25 @@ public class PedidoControllerTest {
         dataPedido = LocalDateTime.now();
 
         // Configurando o produto
-        Produto produto = new Produto(1L, "Produto Teste", "Descrição teste", new BigDecimal("99.90"), 10);
+        ProdutoEntity produtoEntity = new ProdutoEntity(1L, "Produto Teste", "Descrição teste", new BigDecimal("99.90"), 10);
 
         // Configurando o pedido
-        pedido = new Pedido(1L, "Cliente Teste", dataPedido, "Observação teste",
-                new BigDecimal("99.90"), Pedido.StatusPedido.PENDENTE);
+        pedidoEntity = new PedidoEntity(1L, "Cliente Teste", dataPedido, "Observação teste",
+                new BigDecimal("99.90"), PedidoEntity.StatusPedido.PENDENTE);
 
         // Configurando o item do pedido
-        ItemPedido itemPedido = new ItemPedido(1L, pedido, produto, 1, new BigDecimal("99.90"));
-        itemPedido.calcularValorTotal();
+        ItemPedidoEntity itemPedidoEntity = new ItemPedidoEntity(1L, pedidoEntity, produtoEntity, 1, new BigDecimal("99.90"));
+        itemPedidoEntity.calcularValorTotal();
 
         // Adicionando o item ao pedido
-        pedido.getItens().add(itemPedido);
+        pedidoEntity.getItens().add(itemPedidoEntity);
     }
 
     @Test
     @DisplayName("Deve retornar todos os pedidos")
     void testListarTodos() throws Exception {
         // Arrange
-        when(pedidoService.buscarTodos()).thenReturn(Arrays.asList(pedido));
+        when(pedidoService.buscarTodos()).thenReturn(Arrays.asList(pedidoEntity));
 
         // Act & Assert
         mockMvc.perform(get("/api/pedidos"))
@@ -86,7 +85,7 @@ public class PedidoControllerTest {
     @DisplayName("Deve retornar pedido por ID")
     void testBuscarPorId() throws Exception {
         // Arrange
-        when(pedidoService.buscarPorId(1L)).thenReturn(pedido);
+        when(pedidoService.buscarPorId(1L)).thenReturn(pedidoEntity);
 
         // Act & Assert
         mockMvc.perform(get("/api/pedidos/1"))
@@ -121,7 +120,7 @@ public class PedidoControllerTest {
     @DisplayName("Deve retornar pedidos por cliente")
     void testBuscarPorCliente() throws Exception {
         // Arrange
-        when(pedidoService.buscarPorCliente("Cliente")).thenReturn(Collections.singletonList(pedido));
+        when(pedidoService.buscarPorCliente("Cliente")).thenReturn(Collections.singletonList(pedidoEntity));
 
         // Act & Assert
         mockMvc.perform(get("/api/pedidos/cliente").param("cliente", "Cliente"))
@@ -140,23 +139,23 @@ public class PedidoControllerTest {
     @DisplayName("Deve criar um novo pedido com itens")
     void testCriar() throws Exception {
         // Arrange
-        Pedido novoPedido = new Pedido();
-        novoPedido.setCliente("Novo Cliente");
-        novoPedido.setObservacao("Nova observação");
+        PedidoEntity novoPedidoEntity = new PedidoEntity();
+        novoPedidoEntity.setCliente("Novo Cliente");
+        novoPedidoEntity.setObservacao("Nova observação");
 
-        Produto produtoExistente = new Produto(1L, "Produto", "Descrição", new BigDecimal("10.00"), 20);
-        ItemPedido novoItem = new ItemPedido();
-        novoItem.setProduto(produtoExistente);
+        ProdutoEntity produtoEntityExistente = new ProdutoEntity(1L, "Produto", "Descrição", new BigDecimal("10.00"), 20);
+        ItemPedidoEntity novoItem = new ItemPedidoEntity();
+        novoItem.setProduto(produtoEntityExistente);
         novoItem.setQuantidade(2);
 
-        novoPedido.getItens().add(novoItem);
+        novoPedidoEntity.getItens().add(novoItem);
 
-        when(pedidoService.salvar(any(Pedido.class))).thenReturn(pedido);
+        when(pedidoService.salvar(any(PedidoEntity.class))).thenReturn(pedidoEntity);
 
         // Act & Assert
         mockMvc.perform(post("/api/pedidos")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(novoPedido)))
+                        .content(objectMapper.writeValueAsString(novoPedidoEntity)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id", is(1)))
                 .andExpect(jsonPath("$.cliente", is("Cliente Teste")))
@@ -164,18 +163,18 @@ public class PedidoControllerTest {
                 .andExpect(jsonPath("$.itens", hasSize(1)))
                 .andExpect(jsonPath("$.itens[0].quantidade", is(1)));
 
-        verify(pedidoService, times(1)).salvar(any(Pedido.class));
+        verify(pedidoService, times(1)).salvar(any(PedidoEntity.class));
     }
 
     @Test
     @DisplayName("Deve atualizar o status de um pedido")
     void testAtualizarStatus() throws Exception {
         // Arrange
-        Pedido pedidoAtualizado = new Pedido(1L, "Cliente Teste", dataPedido, "Observação teste",
-                new BigDecimal("99.90"), Pedido.StatusPedido.APROVADO);
-        pedidoAtualizado.getItens().add(pedido.getItens().get(0));
+        PedidoEntity pedidoEntityAtualizado = new PedidoEntity(1L, "Cliente Teste", dataPedido, "Observação teste",
+                new BigDecimal("99.90"), PedidoEntity.StatusPedido.APROVADO);
+        pedidoEntityAtualizado.getItens().add(pedidoEntity.getItens().get(0));
 
-        when(pedidoService.atualizarStatus(eq(1L), eq(Pedido.StatusPedido.APROVADO))).thenReturn(pedidoAtualizado);
+        when(pedidoService.atualizarStatus(eq(1L), eq(PedidoEntity.StatusPedido.APROVADO))).thenReturn(pedidoEntityAtualizado);
 
         // Act & Assert
         mockMvc.perform(patch("/api/pedidos/1/status")
@@ -185,7 +184,7 @@ public class PedidoControllerTest {
                 .andExpect(jsonPath("$.status", is("APROVADO")))
                 .andExpect(jsonPath("$.itens", hasSize(1)));
 
-        verify(pedidoService, times(1)).atualizarStatus(eq(1L), eq(Pedido.StatusPedido.APROVADO));
+        verify(pedidoService, times(1)).atualizarStatus(eq(1L), eq(PedidoEntity.StatusPedido.APROVADO));
     }
 
     @Test

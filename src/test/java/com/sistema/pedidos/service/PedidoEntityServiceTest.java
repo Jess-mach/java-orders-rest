@@ -1,10 +1,10 @@
 package com.sistema.pedidos.service;
 
+import com.sistema.pedidos.entity.ItemPedidoEntity;
+import com.sistema.pedidos.entity.PedidoEntity;
+import com.sistema.pedidos.entity.ProdutoEntity;
 import com.sistema.pedidos.exception.BadRequestException;
 import com.sistema.pedidos.exception.ResourceNotFoundException;
-import com.sistema.pedidos.model.ItemPedido;
-import com.sistema.pedidos.model.Pedido;
-import com.sistema.pedidos.model.Produto;
 import com.sistema.pedidos.repository.PedidoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -26,7 +26,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class PedidoServiceTest {
+public class PedidoEntityServiceTest {
 
     @Mock
     private PedidoRepository pedidoRepository;
@@ -40,36 +40,36 @@ public class PedidoServiceTest {
     @InjectMocks
     private PedidoService pedidoService;
 
-    private Pedido pedido;
-    private Produto produto;
-    private ItemPedido itemPedido;
+    private PedidoEntity pedidoEntity;
+    private ProdutoEntity produtoEntity;
+    private ItemPedidoEntity itemPedidoEntity;
 
     @BeforeEach
     void setUp() {
         // Configurando o produto
-        produto = new Produto(1L, "Produto Teste", "Descrição teste", new BigDecimal("99.90"), 10);
+        produtoEntity = new ProdutoEntity(1L, "Produto Teste", "Descrição teste", new BigDecimal("99.90"), 10);
 
         // Configurando o pedido
-        pedido = new Pedido(1L, "Cliente Teste", LocalDateTime.now(), "Observação teste",
-                new BigDecimal("99.90"), Pedido.StatusPedido.PENDENTE);
+        pedidoEntity = new PedidoEntity(1L, "Cliente Teste", LocalDateTime.now(), "Observação teste",
+                new BigDecimal("99.90"), PedidoEntity.StatusPedido.PENDENTE);
 
         // Configurando o item do pedido
-        itemPedido = new ItemPedido(1L, pedido, produto, 1, new BigDecimal("99.90"));
-        itemPedido.calcularValorTotal();
+        itemPedidoEntity = new ItemPedidoEntity(1L, pedidoEntity, produtoEntity, 1, new BigDecimal("99.90"));
+        itemPedidoEntity.calcularValorTotal();
 
         // Adicionando o item ao pedido
-        pedido.getItens().add(itemPedido);
+        pedidoEntity.getItens().add(itemPedidoEntity);
     }
 
     @Test
     @DisplayName("Deve retornar todos os pedidos")
     void testBuscarTodos() {
         // Arrange
-        List<Pedido> pedidosEsperados = Arrays.asList(pedido);
+        List<PedidoEntity> pedidosEsperados = Arrays.asList(pedidoEntity);
         when(pedidoRepository.findAll()).thenReturn(pedidosEsperados);
 
         // Act
-        List<Pedido> pedidosRetornados = pedidoService.buscarTodos();
+        List<PedidoEntity> pedidosRetornados = pedidoService.buscarTodos();
 
         // Assert
         assertEquals(pedidosEsperados.size(), pedidosRetornados.size());
@@ -81,15 +81,15 @@ public class PedidoServiceTest {
     @DisplayName("Deve retornar pedido por ID")
     void testBuscarPorId() {
         // Arrange
-        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedido));
+        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedidoEntity));
 
         // Act
-        Pedido pedidoRetornado = pedidoService.buscarPorId(1L);
+        PedidoEntity pedidoEntityRetornado = pedidoService.buscarPorId(1L);
 
         // Assert
-        assertNotNull(pedidoRetornado);
-        assertEquals(pedido.getId(), pedidoRetornado.getId());
-        assertEquals(pedido.getCliente(), pedidoRetornado.getCliente());
+        assertNotNull(pedidoEntityRetornado);
+        assertEquals(pedidoEntity.getId(), pedidoEntityRetornado.getId());
+        assertEquals(pedidoEntity.getCliente(), pedidoEntityRetornado.getCliente());
         verify(pedidoRepository, times(1)).findById(1L);
     }
 
@@ -108,11 +108,11 @@ public class PedidoServiceTest {
     @DisplayName("Deve retornar pedidos por cliente")
     void testBuscarPorCliente() {
         // Arrange
-        List<Pedido> pedidosEsperados = Arrays.asList(pedido);
+        List<PedidoEntity> pedidosEsperados = Arrays.asList(pedidoEntity);
         when(pedidoRepository.findByClienteContainingIgnoreCase("Cliente")).thenReturn(pedidosEsperados);
 
         // Act
-        List<Pedido> pedidosRetornados = pedidoService.buscarPorCliente("Cliente");
+        List<PedidoEntity> pedidosRetornados = pedidoService.buscarPorCliente("Cliente");
 
         // Assert
         assertEquals(pedidosEsperados.size(), pedidosRetornados.size());
@@ -124,27 +124,27 @@ public class PedidoServiceTest {
     @DisplayName("Deve salvar um pedido")
     void testSalvar() {
         // Arrange
-        Pedido novoPedido = new Pedido();
-        novoPedido.setCliente("Novo Cliente");
-        novoPedido.setObservacao("Nova observação");
+        PedidoEntity novoPedidoEntity = new PedidoEntity();
+        novoPedidoEntity.setCliente("Novo Cliente");
+        novoPedidoEntity.setObservacao("Nova observação");
 
-        Produto produtoExistente = new Produto(1L, "Produto", "Descrição", new BigDecimal("10.00"), 20);
-        ItemPedido novoItem = new ItemPedido();
-        novoItem.setProduto(produtoExistente);
+        ProdutoEntity produtoEntityExistente = new ProdutoEntity(1L, "Produto", "Descrição", new BigDecimal("10.00"), 20);
+        ItemPedidoEntity novoItem = new ItemPedidoEntity();
+        novoItem.setProduto(produtoEntityExistente);
         novoItem.setQuantidade(2);
 
-        novoPedido.getItens().add(novoItem);
+        novoPedidoEntity.getItens().add(novoItem);
 
-        when(produtoService.buscarPorId(1L)).thenReturn(produtoExistente);
-        when(pedidoRepository.save(any(Pedido.class))).thenReturn(pedido);
+        when(produtoService.buscarPorId(1L)).thenReturn(produtoEntityExistente);
+        when(pedidoRepository.save(any(PedidoEntity.class))).thenReturn(pedidoEntity);
 
         // Act
-        Pedido pedidoSalvo = pedidoService.salvar(novoPedido);
+        PedidoEntity pedidoEntitySalvo = pedidoService.salvar(novoPedidoEntity);
 
         // Assert
-        assertNotNull(pedidoSalvo);
-        assertEquals(pedido.getId(), pedidoSalvo.getId());
-        verify(pedidoRepository, times(1)).save(novoPedido);
+        assertNotNull(pedidoEntitySalvo);
+        assertEquals(pedidoEntity.getId(), pedidoEntitySalvo.getId());
+        verify(pedidoRepository, times(1)).save(novoPedidoEntity);
         verify(produtoService, times(1)).atualizarEstoque(eq(1L), eq(2));
     }
 
@@ -152,75 +152,75 @@ public class PedidoServiceTest {
     @DisplayName("Deve lançar exceção ao salvar pedido sem itens")
     void testSalvarPedidoSemItens() {
         // Arrange
-        Pedido novoPedido = new Pedido();
-        novoPedido.setCliente("Novo Cliente");
-        novoPedido.setObservacao("Nova observação");
-        novoPedido.setItens(new ArrayList<>());
+        PedidoEntity novoPedidoEntity = new PedidoEntity();
+        novoPedidoEntity.setCliente("Novo Cliente");
+        novoPedidoEntity.setObservacao("Nova observação");
+        novoPedidoEntity.setItens(new ArrayList<>());
 
         // Act & Assert
-        assertThrows(BadRequestException.class, () -> pedidoService.salvar(novoPedido));
-        verify(pedidoRepository, never()).save(any(Pedido.class));
+        assertThrows(BadRequestException.class, () -> pedidoService.salvar(novoPedidoEntity));
+        verify(pedidoRepository, never()).save(any(PedidoEntity.class));
     }
 
     @Test
     @DisplayName("Deve atualizar o status de um pedido")
     void testAtualizarStatus() {
         // Arrange
-        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedido));
-        when(pedidoRepository.save(any(Pedido.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedidoEntity));
+        when(pedidoRepository.save(any(PedidoEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // Act
-        Pedido resultado = pedidoService.atualizarStatus(1L, Pedido.StatusPedido.APROVADO);
+        PedidoEntity resultado = pedidoService.atualizarStatus(1L, PedidoEntity.StatusPedido.APROVADO);
 
         // Assert
         assertNotNull(resultado);
-        assertEquals(Pedido.StatusPedido.APROVADO, resultado.getStatus());
+        assertEquals(PedidoEntity.StatusPedido.APROVADO, resultado.getStatus());
         verify(pedidoRepository, times(1)).findById(1L);
-        verify(pedidoRepository, times(1)).save(pedido);
+        verify(pedidoRepository, times(1)).save(pedidoEntity);
     }
 
     @Test
     @DisplayName("Deve lançar exceção ao tentar alterar para status inválido")
     void testAtualizarStatusInvalido() {
         // Arrange
-        pedido.setStatus(Pedido.StatusPedido.ENTREGUE);
-        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedido));
+        pedidoEntity.setStatus(PedidoEntity.StatusPedido.ENTREGUE);
+        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedidoEntity));
 
         // Act & Assert
         assertThrows(BadRequestException.class, () ->
-                pedidoService.atualizarStatus(1L, Pedido.StatusPedido.PENDENTE));
+                pedidoService.atualizarStatus(1L, PedidoEntity.StatusPedido.PENDENTE));
         verify(pedidoRepository, times(1)).findById(1L);
-        verify(pedidoRepository, never()).save(any(Pedido.class));
+        verify(pedidoRepository, never()).save(any(PedidoEntity.class));
     }
 
     @Test
     @DisplayName("Deve excluir um pedido pendente")
     void testExcluir() {
         // Arrange
-        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedido));
-        doNothing().when(pedidoRepository).delete(pedido);
+        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedidoEntity));
+        doNothing().when(pedidoRepository).delete(pedidoEntity);
 
         // Act
         pedidoService.excluir(1L);
 
         // Assert
         verify(pedidoRepository, times(1)).findById(1L);
-        verify(pedidoRepository, times(1)).delete(pedido);
+        verify(pedidoRepository, times(1)).delete(pedidoEntity);
         // Verificar se o estoque foi restaurado
-        verify(produtoService, times(1)).salvar(produto);
+        verify(produtoService, times(1)).salvar(produtoEntity);
     }
 
     @Test
     @DisplayName("Deve lançar exceção ao tentar excluir pedido não pendente")
     void testExcluirPedidoNaoPendente() {
         // Arrange
-        pedido.setStatus(Pedido.StatusPedido.APROVADO);
-        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedido));
+        pedidoEntity.setStatus(PedidoEntity.StatusPedido.APROVADO);
+        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedidoEntity));
 
         // Act & Assert
         assertThrows(BadRequestException.class, () -> pedidoService.excluir(1L));
         verify(pedidoRepository, times(1)).findById(1L);
-        verify(pedidoRepository, never()).delete(any(Pedido.class));
+        verify(pedidoRepository, never()).delete(any(PedidoEntity.class));
     }
 }
 
