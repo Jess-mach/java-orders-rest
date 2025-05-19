@@ -1,12 +1,13 @@
 package com.sistema.pedidos.service;
 
+import com.sistema.pedidos.entity.ItemPedidoEntity;
+import com.sistema.pedidos.entity.PedidoEntity;
 import com.sistema.pedidos.exception.BadRequestException;
 import com.sistema.pedidos.exception.ResourceNotFoundException;
-import com.sistema.pedidos.model.ItemPedido;
-import com.sistema.pedidos.model.Pedido;
-import com.sistema.pedidos.model.Produto;
+import com.sistema.pedidos.entity.ProdutoEntity;
+import com.sistema.pedidos.model.ItemPedidoRequest;
+import com.sistema.pedidos.model.PedidoRequest;
 import com.sistema.pedidos.repository.PedidoRepository;
-import com.sistema.pedidos.repository.ItemPedidoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,223 +15,234 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 @Service
 public class PedidoService {
 
     private final PedidoRepository pedidoRepository;
     private final ProdutoService produtoService;
+    private final ItemPedidoService itemPedidoService;
 
     @Autowired
     public PedidoService(
             PedidoRepository pedidoRepository,
-            ProdutoService produtoService) {
+            ProdutoService produtoService,
+            ItemPedidoService itemPedidoService) {
         this.pedidoRepository = pedidoRepository;
         this.produtoService = produtoService;
+        this.itemPedidoService = itemPedidoService;
     }
 
     @Transactional(readOnly = true)
-    public List<Pedido> buscarTodos() {
-        return pedidoRepository.findAll();
+    public List<PedidoEntity> buscarTodos() {
+        List<PedidoEntity> all = pedidoRepository.findAll();
+        //alterar o retorno para uma nova entidade chamada PedidoResponse com uma lista de ItemResponse
+        return all;
     }
 
     @Transactional(readOnly = true)
-    public Pedido buscarPorId(Long id) {
-        return pedidoRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Pedido", "id", id));
+    public PedidoEntity buscarPorId(Long id) {
+        Optional<PedidoEntity> byId = pedidoRepository.findById(id);
+
+        return byId.orElseThrow(() -> new ResourceNotFoundException("Pedido", "id", id));
     }
 
     @Transactional(readOnly = true)
-    public List<Pedido> buscarPorCliente(String cliente) {
+    public List<PedidoEntity> buscarPorCliente(String cliente) {
         return pedidoRepository.findByClienteContainingIgnoreCase(cliente);
     }
 
     @Transactional(readOnly = true)
-    public List<Pedido> buscarPorPeriodo(LocalDateTime inicio, LocalDateTime fim) {
+    public List<PedidoEntity> buscarPorPeriodo(LocalDateTime inicio, LocalDateTime fim) {
         return pedidoRepository.findByDataPedidoBetween(inicio, fim);
     }
 
     @Transactional(readOnly = true)
-    public List<Pedido> buscarPorStatus(Pedido.StatusPedido status) {
+    public List<PedidoEntity> buscarPorStatus(PedidoEntity.StatusPedido status) {
         return pedidoRepository.findByStatus(status);
     }
 
     @Transactional
-    public Pedido salvar(Pedido pedido) {
-        if (pedido.getId() != null) {
-            throw new BadRequestException("Não é permitido informar o ID ao criar um novo pedido");
-        }
+    public PedidoEntity salvar(PedidoRequest request) {
+        PedidoEntity pedidoEntity = new PedidoEntity();
+        pedidoEntity.setCliente(request.getCliente());
+        pedidoEntity.setObservacao(request.getObservacao());
+        pedidoEntity.setValorTotal(request.getValorTotal());
 
-        validarItensPedido(pedido);
+       pedidoEntity = validarItensPedido(request, pedidoEntity);
 
         // Define a data do pedido como agora se não for informada
-        if (pedido.getDataPedido() == null) {
-            pedido.setDataPedido(LocalDateTime.now());
+        if (pedidoEntity.getDataPedido() == null) {
+            pedidoEntity.setDataPedido(LocalDateTime.now());
         }
 
         // Define o status inicial como PENDENTE se não for informado
-        if (pedido.getStatus() == null) {
-            pedido.setStatus(Pedido.StatusPedido.PENDENTE);
+        if (request.getStatus() == null) {
+            pedidoEntity.setStatus(PedidoEntity.StatusPedido.PENDENTE);
         }
 
-        // Vincula os itens ao pedido e configura os produtos
-        pedido.getItens().forEach(item -> {
-            item.setPedido(pedido);
-        });
-
         // Salva o pedido com seus itens
-        Pedido pedidoSalvo = pedidoRepository.save(pedido);
+        PedidoEntity pedidoSalvo = pedidoRepository.save(pedidoEntity);
 
         // Atualiza o estoque dos produtos
-        for (ItemPedido item : pedido.getItens()) {
+        for (ItemPedidoEntity item : pedidoEntity.getItens()) {
+            item.setPedidoId(pedidoSalvo.getId());
+
+            itemPedidoService.salvar(item);
+
             produtoService.atualizarEstoque(item.getProduto().getId(), item.getQuantidade());
         }
 
-        return pedidoSalvo;
+        return pedidoRepository.findById(pedidoSalvo.getId())
+                .orElseThrow();
     }
 
     @Transactional
-    public Pedido atualizar(Long id, Pedido pedidoAtualizado) {
-        Pedido pedidoExistente = buscarPorId(id);
+    public PedidoEntity atualizar(Long id, PedidoEntity pedidoEntityAtualizado) {
+        PedidoEntity pedidoEntityExistente = buscarPorId(id);
 
         // Só permite atualizar pedidos com status PENDENTE
-        if (pedidoExistente.getStatus() != Pedido.StatusPedido.PENDENTE) {
+        if (pedidoEntityExistente.getStatus() != PedidoEntity.StatusPedido.PENDENTE) {
             throw new BadRequestException("Não é possível atualizar um pedido que não esteja com status PENDENTE");
         }
 
         // Atualiza apenas os campos permitidos
-        pedidoExistente.setCliente(pedidoAtualizado.getCliente());
-        pedidoExistente.setObservacao(pedidoAtualizado.getObservacao());
+        pedidoEntityExistente.setCliente(pedidoEntityAtualizado.getCliente());
+        pedidoEntityExistente.setObservacao(pedidoEntityAtualizado.getObservacao());
 
         // Se o status está sendo alterado, verifica se a transição é válida
-        if (pedidoAtualizado.getStatus() != null &&
-                pedidoExistente.getStatus() != pedidoAtualizado.getStatus()) {
-            validarAlteracaoStatus(pedidoExistente.getStatus(), pedidoAtualizado.getStatus());
-            pedidoExistente.setStatus(pedidoAtualizado.getStatus());
+        if (pedidoEntityAtualizado.getStatus() != null &&
+                pedidoEntityExistente.getStatus() != pedidoEntityAtualizado.getStatus()) {
+            validarAlteracaoStatus(pedidoEntityExistente.getStatus(), pedidoEntityAtualizado.getStatus());
+            pedidoEntityExistente.setStatus(pedidoEntityAtualizado.getStatus());
         }
 
         // Se houver novos itens, validar e atualizar
-        if (pedidoAtualizado.getItens() != null && !pedidoAtualizado.getItens().isEmpty()) {
+        if (pedidoEntityAtualizado.getItens() != null && !pedidoEntityAtualizado.getItens().isEmpty()) {
             // Remove os itens antigos e restaura o estoque
-            for (ItemPedido itemAntigo : pedidoExistente.getItens()) {
-                Produto produto = itemAntigo.getProduto();
-                produto.setQuantidadeEstoque(produto.getQuantidadeEstoque() + itemAntigo.getQuantidade());
-                produtoService.salvar(produto);
+            for (ItemPedidoEntity itemAntigo : pedidoEntityExistente.getItens()) {
+                ProdutoEntity produtoEntity = itemAntigo.getProduto();
+                produtoEntity.setQuantidadeEstoque(produtoEntity.getQuantidadeEstoque() + itemAntigo.getQuantidade());
+                produtoService.salvar(produtoEntity);
             }
 
             // Limpa todos os itens atuais
-            pedidoExistente.getItens().clear();
+            pedidoEntityExistente.getItens().clear();
 
             // Adiciona os novos itens
-            for (ItemPedido novoItem : pedidoAtualizado.getItens()) {
-                Produto produto = produtoService.buscarPorId(novoItem.getProduto().getId());
+            for (ItemPedidoEntity novoItem : pedidoEntityAtualizado.getItens()) {
+                ProdutoEntity produtoEntity = produtoService.buscarPorId(novoItem.getProduto().getId());
 
                 if (novoItem.getQuantidade() <= 0) {
                     throw new BadRequestException("A quantidade deve ser maior que zero");
                 }
 
-                if (novoItem.getQuantidade() > produto.getQuantidadeEstoque()) {
-                    throw new BadRequestException("Quantidade insuficiente em estoque para o produto: " + produto.getNome());
+                if (novoItem.getQuantidade() > produtoEntity.getQuantidadeEstoque()) {
+                    throw new BadRequestException("Quantidade insuficiente em estoque para o produto: " + produtoEntity.getNome());
                 }
 
                 // Configura o novo item
-                ItemPedido item = new ItemPedido();
-                item.setPedido(pedidoExistente);
-                item.setProduto(produto);
+                ItemPedidoEntity item = new ItemPedidoEntity();
+                item.setPedidoId(pedidoEntityExistente.getId());
+                item.setProduto(produtoEntity);
                 item.setQuantidade(novoItem.getQuantidade());
-                item.setPrecoUnitario(produto.getPreco());
+                item.setPrecoUnitario(produtoEntity.getPreco());
                 item.calcularValorTotal();
 
                 // Adiciona o item ao pedido
-                pedidoExistente.getItens().add(item);
+                pedidoEntityExistente.getItens().add(item);
 
                 // Atualiza o estoque
-                produtoService.atualizarEstoque(produto.getId(), novoItem.getQuantidade());
+                produtoService.atualizarEstoque(produtoEntity.getId(), novoItem.getQuantidade());
             }
         }
 
         // Recalcula o valor total
-        pedidoExistente.recalcularValorTotal();
+        pedidoEntityExistente.recalcularValorTotal();
 
-        return pedidoRepository.save(pedidoExistente);
+        return pedidoRepository.save(pedidoEntityExistente);
     }
 
     @Transactional
-    public Pedido atualizarStatus(Long id, Pedido.StatusPedido novoStatus) {
-        Pedido pedido = buscarPorId(id);
+    public PedidoEntity atualizarStatus(Long id, PedidoEntity.StatusPedido novoStatus) {
+        PedidoEntity pedidoEntity = buscarPorId(id);
 
-        validarAlteracaoStatus(pedido.getStatus(), novoStatus);
+        validarAlteracaoStatus(pedidoEntity.getStatus(), novoStatus);
 
-        pedido.setStatus(novoStatus);
-        return pedidoRepository.save(pedido);
+        pedidoEntity.setStatus(novoStatus);
+        return pedidoRepository.save(pedidoEntity);
     }
 
     @Transactional
     public void excluir(Long id) {
-        Pedido pedido = buscarPorId(id);
+        PedidoEntity pedidoEntity = buscarPorId(id);
 
         // Só permite excluir pedidos com status PENDENTE
-        if (pedido.getStatus() != Pedido.StatusPedido.PENDENTE) {
+        if (pedidoEntity.getStatus() != PedidoEntity.StatusPedido.PENDENTE) {
             throw new BadRequestException("Não é possível excluir um pedido que não esteja com status PENDENTE");
         }
 
         // Devolve os itens ao estoque
-        for (ItemPedido item : pedido.getItens()) {
-            Produto produto = item.getProduto();
-            produto.setQuantidadeEstoque(produto.getQuantidadeEstoque() + item.getQuantidade());
-            produtoService.salvar(produto);
+        for (ItemPedidoEntity item : pedidoEntity.getItens()) {
+            ProdutoEntity produtoEntity = item.getProduto();
+            produtoEntity.setQuantidadeEstoque(produtoEntity.getQuantidadeEstoque() + item.getQuantidade());
+            produtoService.salvar(produtoEntity);
         }
 
-        pedidoRepository.delete(pedido);
+        pedidoRepository.delete(pedidoEntity);
     }
 
     // Métodos de validação
-    private void validarItensPedido(Pedido pedido) {
-        if (pedido.getItens() == null || pedido.getItens().isEmpty()) {
+    private PedidoEntity validarItensPedido(PedidoRequest request, PedidoEntity pedidoEntity) {
+        if (request.getItens() == null || request.getItens().isEmpty()) {
             throw new BadRequestException("O pedido deve ter pelo menos um item");
         }
 
-        for (ItemPedido item : pedido.getItens()) {
-            if (item.getProduto() == null || item.getProduto().getId() == null) {
-                throw new BadRequestException("Produto não informado para um dos itens do pedido");
-            }
+        List <ItemPedidoEntity> itens = new ArrayList<>();
 
-            Produto produto = produtoService.buscarPorId(item.getProduto().getId());
-            item.setProduto(produto);
+
+        for (ItemPedidoRequest item : request.getItens()) {
+            ProdutoEntity produtoEntity = produtoService.buscarPorId(item.getProdutoId());
+            ItemPedidoEntity itemPedido = new ItemPedidoEntity();
+
+            itemPedido.setProduto(produtoEntity);
+            itemPedido.setQuantidade(item.getQuantidade());
 
             if (item.getQuantidade() <= 0) {
                 throw new BadRequestException("A quantidade deve ser maior que zero");
             }
 
-            if (item.getQuantidade() > produto.getQuantidadeEstoque()) {
-                throw new BadRequestException("Quantidade insuficiente em estoque para o produto: " + produto.getNome());
+            if (item.getQuantidade() > produtoEntity.getQuantidadeEstoque()) {
+                throw new BadRequestException("Quantidade insuficiente em estoque para o produto: " + produtoEntity.getNome());
             }
 
             // Define o preço unitário com base no preço atual do produto
-            item.setPrecoUnitario(produto.getPreco());
-            item.calcularValorTotal();
+            itemPedido.setPrecoUnitario(produtoEntity.getPreco());
+            itemPedido.calcularValorTotal();
 
-            // Associa o item ao pedido
-            item.setPedido(pedido);
+            itens.add(itemPedido);
         }
 
+        pedidoEntity.setItens(itens);
         // Recalcula o valor total do pedido
-        pedido.recalcularValorTotal();
+        pedidoEntity.recalcularValorTotal();
+
+        return pedidoEntity;
     }
 
-    private void validarAlteracaoStatus(Pedido.StatusPedido statusAtual, Pedido.StatusPedido novoStatus) {
+    private void validarAlteracaoStatus(PedidoEntity.StatusPedido statusAtual, PedidoEntity.StatusPedido novoStatus) {
         // Regras de transição de status
         switch (statusAtual) {
             case PENDENTE:
                 // De PENDENTE pode ir para APROVADO ou CANCELADO
-                if (novoStatus != Pedido.StatusPedido.APROVADO && novoStatus != Pedido.StatusPedido.CANCELADO) {
+                if (novoStatus != PedidoEntity.StatusPedido.APROVADO && novoStatus != PedidoEntity.StatusPedido.CANCELADO) {
                     throw new BadRequestException("De PENDENTE só pode alterar para APROVADO ou CANCELADO");
                 }
                 break;
             case APROVADO:
                 // De APROVADO pode ir para ENTREGUE ou CANCELADO
-                if (novoStatus != Pedido.StatusPedido.ENTREGUE && novoStatus != Pedido.StatusPedido.CANCELADO) {
+                if (novoStatus != PedidoEntity.StatusPedido.ENTREGUE && novoStatus != PedidoEntity.StatusPedido.CANCELADO) {
                     throw new BadRequestException("De APROVADO só pode alterar para ENTREGUE ou CANCELADO");
                 }
                 break;

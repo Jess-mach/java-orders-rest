@@ -1,8 +1,8 @@
 package com.sistema.pedidos.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sistema.pedidos.entity.ProdutoEntity;
 import com.sistema.pedidos.exception.ResourceNotFoundException;
-import com.sistema.pedidos.model.Produto;
 import com.sistema.pedidos.service.ProdutoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ProdutoController.class)
-public class ProdutoControllerTest {
+public class ProdutoEntityControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -37,22 +37,22 @@ public class ProdutoControllerTest {
     @MockBean
     private ProdutoService produtoService;
 
-    private Produto produto;
+    private ProdutoEntity produtoEntity;
 
     @BeforeEach
     void setUp() {
-        produto = new Produto(1L, "Produto Teste", "Descrição teste", new BigDecimal("99.90"), 10);
+        produtoEntity = new ProdutoEntity(1L, "Produto Teste", "Descrição teste", new BigDecimal("99.90"), 10);
     }
 
     @Test
     @DisplayName("Deve retornar todos os produtos")
     void testListarTodos() throws Exception {
         // Arrange
-        List<Produto> produtos = Arrays.asList(
-                produto,
-                new Produto(2L, "Outro Produto", "Outra descrição", new BigDecimal("49.90"), 5)
+        List<ProdutoEntity> produtoEntities = Arrays.asList(
+                produtoEntity,
+                new ProdutoEntity(2L, "Outro Produto", "Outra descrição", new BigDecimal("49.90"), 5)
         );
-        when(produtoService.buscarTodos()).thenReturn(produtos);
+        when(produtoService.buscarTodos()).thenReturn(produtoEntities);
 
         // Act & Assert
         mockMvc.perform(get("/api/produtos"))
@@ -71,7 +71,7 @@ public class ProdutoControllerTest {
     @DisplayName("Deve retornar produto por ID")
     void testBuscarPorId() throws Exception {
         // Arrange
-        when(produtoService.buscarPorId(1L)).thenReturn(produto);
+        when(produtoService.buscarPorId(1L)).thenReturn(produtoEntity);
 
         // Act & Assert
         mockMvc.perform(get("/api/produtos/1"))
@@ -101,8 +101,8 @@ public class ProdutoControllerTest {
     @DisplayName("Deve retornar produtos por nome")
     void testBuscarPorNome() throws Exception {
         // Arrange
-        List<Produto> produtos = Collections.singletonList(produto);
-        when(produtoService.buscarPorNome("Teste")).thenReturn(produtos);
+        List<ProdutoEntity> produtoEntities = Collections.singletonList(produtoEntity);
+        when(produtoService.buscarPorNome("Teste")).thenReturn(produtoEntities);
 
         // Act & Assert
         mockMvc.perform(get("/api/produtos/buscar").param("nome", "Teste"))
@@ -119,40 +119,40 @@ public class ProdutoControllerTest {
     @DisplayName("Deve criar um novo produto")
     void testCriar() throws Exception {
         // Arrange
-        Produto novoProduto = new Produto("Novo Produto", "Nova descrição", new BigDecimal("29.90"), 20);
-        when(produtoService.salvar(any(Produto.class))).thenReturn(
-                new Produto(3L, "Novo Produto", "Nova descrição", new BigDecimal("29.90"), 20));
+        ProdutoEntity novoProdutoEntity = new ProdutoEntity("Novo Produto", "Nova descrição", new BigDecimal("29.90"), 20);
+        when(produtoService.salvar(any(ProdutoEntity.class))).thenReturn(
+                new ProdutoEntity(3L, "Novo Produto", "Nova descrição", new BigDecimal("29.90"), 20));
 
         // Act & Assert
         mockMvc.perform(post("/api/produtos")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(novoProduto)))
+                        .content(objectMapper.writeValueAsString(novoProdutoEntity)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id", is(3)))
                 .andExpect(jsonPath("$.nome", is("Novo Produto")))
                 .andExpect(jsonPath("$.preco", is(29.90)));
 
-        verify(produtoService, times(1)).salvar(any(Produto.class));
+        verify(produtoService, times(1)).salvar(any(ProdutoEntity.class));
     }
 
     @Test
     @DisplayName("Deve atualizar um produto existente")
     void testAtualizar() throws Exception {
         // Arrange
-        Produto produtoAtualizado = new Produto("Produto Atualizado", "Descrição atualizada", new BigDecimal("109.90"), 15);
-        when(produtoService.atualizar(eq(1L), any(Produto.class))).thenReturn(
-                new Produto(1L, "Produto Atualizado", "Descrição atualizada", new BigDecimal("109.90"), 15));
+        ProdutoEntity produtoEntityAtualizado = new ProdutoEntity("Produto Atualizado", "Descrição atualizada", new BigDecimal("109.90"), 15);
+        when(produtoService.atualizar(eq(1L), any(ProdutoEntity.class))).thenReturn(
+                new ProdutoEntity(1L, "Produto Atualizado", "Descrição atualizada", new BigDecimal("109.90"), 15));
 
         // Act & Assert
         mockMvc.perform(put("/api/produtos/1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(produtoAtualizado)))
+                        .content(objectMapper.writeValueAsString(produtoEntityAtualizado)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", is(1)))
                 .andExpect(jsonPath("$.nome", is("Produto Atualizado")))
                 .andExpect(jsonPath("$.preco", is(109.90)));
 
-        verify(produtoService, times(1)).atualizar(eq(1L), any(Produto.class));
+        verify(produtoService, times(1)).atualizar(eq(1L), any(ProdutoEntity.class));
     }
 
     @Test
@@ -172,15 +172,15 @@ public class ProdutoControllerTest {
     @DisplayName("Deve validar campos obrigatórios ao criar produto")
     void testCriarProdutoInvalido() throws Exception {
         // Arrange
-        Produto produtoInvalido = new Produto();
-        produtoInvalido.setDescricao("Apenas descrição");
+        ProdutoEntity produtoEntityInvalido = new ProdutoEntity();
+        produtoEntityInvalido.setDescricao("Apenas descrição");
 
         // Act & Assert
         mockMvc.perform(post("/api/produtos")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(produtoInvalido)))
+                        .content(objectMapper.writeValueAsString(produtoEntityInvalido)))
                 .andExpect(status().isBadRequest());
 
-        verify(produtoService, never()).salvar(any(Produto.class));
+        verify(produtoService, never()).salvar(any(ProdutoEntity.class));
     }
 }

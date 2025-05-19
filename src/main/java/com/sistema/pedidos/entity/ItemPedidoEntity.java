@@ -1,4 +1,4 @@
-package com.sistema.pedidos.model;
+package com.sistema.pedidos.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -9,19 +9,31 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "itens_pedido")
-public class ItemPedido {
+public class ItemPedidoEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "pedido_id", nullable = false)
-    private Pedido pedido;
+    @NotNull
+    @Column(name = "pedido_id")
+    private Long pedidoId;
+
+    public Long getPedidoId() {
+        return pedidoId;
+    }
+
+    public void setPedidoId(Long pedidoId) {
+        this.pedidoId = pedidoId;
+    }
+
+    public void setValorTotal(BigDecimal valorTotal) {
+        this.valorTotal = valorTotal;
+    }
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "produto_id", nullable = false)
-    private Produto produto;
+    private ProdutoEntity produto;
 
     @NotNull(message = "A quantidade é obrigatória")
     @Positive(message = "A quantidade deve ser maior que zero")
@@ -37,24 +49,23 @@ public class ItemPedido {
     private BigDecimal valorTotal;
 
     // Construtores
-    public ItemPedido() {
+    public ItemPedidoEntity() {
         this.quantidade = 0;
         this.precoUnitario = BigDecimal.ZERO;
         this.valorTotal = BigDecimal.ZERO;
     }
 
-    public ItemPedido(Produto produto, Integer quantidade) {
+    public ItemPedidoEntity(ProdutoEntity produtoEntity, Integer quantidade) {
         this();
-        this.produto = produto;
+        this.produto = produtoEntity;
         this.quantidade = quantidade;
-        this.precoUnitario = produto.getPreco();
+        this.precoUnitario = produtoEntity.getPreco();
         this.calcularValorTotal();
     }
 
-    public ItemPedido(Long id, Pedido pedido, Produto produto, Integer quantidade, BigDecimal precoUnitario) {
+    public ItemPedidoEntity(Long id, PedidoEntity pedidoEntity, ProdutoEntity produtoEntity, Integer quantidade, BigDecimal precoUnitario) {
         this.id = id;
-        this.pedido = pedido;
-        this.produto = produto;
+        this.produto = produtoEntity;
         this.quantidade = quantidade;
         this.precoUnitario = precoUnitario;
         this.calcularValorTotal();
@@ -78,22 +89,14 @@ public class ItemPedido {
         this.id = id;
     }
 
-    public Pedido getPedido() {
-        return pedido;
-    }
-
-    public void setPedido(Pedido pedido) {
-        this.pedido = pedido;
-    }
-
-    public Produto getProduto() {
+    public ProdutoEntity getProduto() {
         return produto;
     }
 
-    public void setProduto(Produto produto) {
-        this.produto = produto;
-        if (produto != null) {
-            this.precoUnitario = produto.getPreco();
+    public void setProduto(ProdutoEntity produtoEntity) {
+        this.produto = produtoEntity;
+        if (produtoEntity != null) {
+            this.precoUnitario = produtoEntity.getPreco();
             calcularValorTotal();
         }
     }
@@ -125,7 +128,7 @@ public class ItemPedido {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        ItemPedido that = (ItemPedido) o;
+        ItemPedidoEntity that = (ItemPedidoEntity) o;
         return Objects.equals(id, that.id);
     }
 
@@ -138,7 +141,6 @@ public class ItemPedido {
     public String toString() {
         return "ItemPedido{" +
                 "id=" + id +
-                ", pedido=" + (pedido != null ? pedido.getId() : null) +
                 ", produto=" + (produto != null ? produto.getNome() : null) +
                 ", quantidade=" + quantidade +
                 ", precoUnitario=" + precoUnitario +

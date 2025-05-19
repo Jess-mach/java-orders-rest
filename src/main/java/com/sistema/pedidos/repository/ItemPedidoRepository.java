@@ -1,13 +1,13 @@
 package com.sistema.pedidos.repository;
 
-import com.sistema.pedidos.model.ItemPedido;
+import com.sistema.pedidos.entity.ItemPedidoEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 @Repository
-public interface ItemPedidoRepository extends JpaRepository<ItemPedido, Long> {
-    List<ItemPedido> findByPedidoId(Long pedidoId);
-    List<ItemPedido> findByProdutoId(Long produtoId);
+public interface ItemPedidoRepository extends JpaRepository<ItemPedidoEntity, Long> {
+    List<ItemPedidoEntity> findByPedidoId(Long pedidoId);
+    List<ItemPedidoEntity> findByProdutoId(Long produtoId);
 }

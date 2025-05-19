@@ -1,7 +1,7 @@
 package com.sistema.pedidos.service;
 
+import com.sistema.pedidos.entity.ProdutoEntity;
 import com.sistema.pedidos.exception.ResourceNotFoundException;
-import com.sistema.pedidos.model.Produto;
 import com.sistema.pedidos.repository.ProdutoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,54 +20,54 @@ public class ProdutoService {
     }
 
     @Transactional(readOnly = true)
-    public List<Produto> buscarTodos() {
+    public List<ProdutoEntity> buscarTodos() {
         return produtoRepository.findAll();
     }
 
     @Transactional(readOnly = true)
-    public Produto buscarPorId(Long id) {
+    public ProdutoEntity buscarPorId(Long id) {
         return produtoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Produto", "id", id));
     }
 
     @Transactional(readOnly = true)
-    public List<Produto> buscarPorNome(String nome) {
+    public List<ProdutoEntity> buscarPorNome(String nome) {
         return produtoRepository.findByNomeContainingIgnoreCase(nome);
     }
 
     @Transactional
-    public Produto salvar(Produto produto) {
-        return produtoRepository.save(produto);
+    public ProdutoEntity salvar(ProdutoEntity produtoEntity) {
+        return produtoRepository.save(produtoEntity);
     }
 
     @Transactional
-    public Produto atualizar(Long id, Produto produtoAtualizado) {
-        Produto produtoExistente = buscarPorId(id);
+    public ProdutoEntity atualizar(Long id, ProdutoEntity produtoEntityAtualizado) {
+        ProdutoEntity produtoEntityExistente = buscarPorId(id);
 
-        produtoExistente.setNome(produtoAtualizado.getNome());
-        produtoExistente.setDescricao(produtoAtualizado.getDescricao());
-        produtoExistente.setPreco(produtoAtualizado.getPreco());
-        produtoExistente.setQuantidadeEstoque(produtoAtualizado.getQuantidadeEstoque());
+        produtoEntityExistente.setNome(produtoEntityAtualizado.getNome());
+        produtoEntityExistente.setDescricao(produtoEntityAtualizado.getDescricao());
+        produtoEntityExistente.setPreco(produtoEntityAtualizado.getPreco());
+        produtoEntityExistente.setQuantidadeEstoque(produtoEntityAtualizado.getQuantidadeEstoque());
 
-        return produtoRepository.save(produtoExistente);
+        return produtoRepository.save(produtoEntityExistente);
     }
 
     @Transactional
     public void atualizarEstoque(Long id, int quantidade) {
-        Produto produto = buscarPorId(id);
-        int novoEstoque = produto.getQuantidadeEstoque() - quantidade;
+        ProdutoEntity produtoEntity = buscarPorId(id);
+        int novoEstoque = produtoEntity.getQuantidadeEstoque() - quantidade;
 
         if (novoEstoque < 0) {
-            throw new RuntimeException("Quantidade insuficiente em estoque para o produto: " + produto.getNome());
+            throw new RuntimeException("Quantidade insuficiente em estoque para o produto: " + produtoEntity.getNome());
         }
 
-        produto.setQuantidadeEstoque(novoEstoque);
-        produtoRepository.save(produto);
+        produtoEntity.setQuantidadeEstoque(novoEstoque);
+        produtoRepository.save(produtoEntity);
     }
 
     @Transactional
     public void excluir(Long id) {
-        Produto produto = buscarPorId(id);
-        produtoRepository.delete(produto);
+        ProdutoEntity produtoEntity = buscarPorId(id);
+        produtoRepository.delete(produtoEntity);
     }
 }

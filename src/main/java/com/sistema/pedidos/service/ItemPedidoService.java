@@ -1,10 +1,10 @@
 package com.sistema.pedidos.service;
 
+import com.sistema.pedidos.entity.ItemPedidoEntity;
+import com.sistema.pedidos.entity.PedidoEntity;
 import com.sistema.pedidos.exception.BadRequestException;
 import com.sistema.pedidos.exception.ResourceNotFoundException;
-import com.sistema.pedidos.model.ItemPedido;
-import com.sistema.pedidos.model.Pedido;
-import com.sistema.pedidos.model.Produto;
+import com.sistema.pedidos.entity.ProdutoEntity;
 import com.sistema.pedidos.repository.ItemPedidoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -27,82 +27,82 @@ public class ItemPedidoService {
     }
 
     @Transactional(readOnly = true)
-    public List<ItemPedido> buscarTodos() {
+    public List<ItemPedidoEntity> buscarTodos() {
         return itemPedidoRepository.findAll();
     }
 
     @Transactional(readOnly = true)
-    public ItemPedido buscarPorId(Long id) {
+    public ItemPedidoEntity buscarPorId(Long id) {
         return itemPedidoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("ItemPedido", "id", id));
     }
 
     @Transactional(readOnly = true)
-    public List<ItemPedido> buscarPorPedido(Long pedidoId) {
+    public List<ItemPedidoEntity> buscarPorPedido(Long pedidoId) {
         return itemPedidoRepository.findByPedidoId(pedidoId);
     }
 
     @Transactional(readOnly = true)
-    public List<ItemPedido> buscarPorProduto(Long produtoId) {
+    public List<ItemPedidoEntity> buscarPorProduto(Long produtoId) {
         return itemPedidoRepository.findByProdutoId(produtoId);
     }
 
     @Transactional
-    public ItemPedido salvar(ItemPedido itemPedido) {
-        if (itemPedido.getProduto() == null || itemPedido.getProduto().getId() == null) {
+    public ItemPedidoEntity salvar(ItemPedidoEntity itemPedidoEntity) {
+        if (itemPedidoEntity.getProduto() == null || itemPedidoEntity.getProduto().getId() == null) {
             throw new BadRequestException("Produto não informado");
         }
 
-        if (itemPedido.getQuantidade() <= 0) {
+        if (itemPedidoEntity.getQuantidade() <= 0) {
             throw new BadRequestException("A quantidade deve ser maior que zero");
         }
 
         // Busca o produto para confirmar existência e obter preço
-        Produto produto = produtoService.buscarPorId(itemPedido.getProduto().getId());
-        itemPedido.setProduto(produto);
-        itemPedido.setPrecoUnitario(produto.getPreco());
-        itemPedido.calcularValorTotal();
+        ProdutoEntity produtoEntity = produtoService.buscarPorId(itemPedidoEntity.getProduto().getId());
+        itemPedidoEntity.setProduto(produtoEntity);
+        itemPedidoEntity.setPrecoUnitario(produtoEntity.getPreco());
+        itemPedidoEntity.calcularValorTotal();
 
-        return itemPedidoRepository.save(itemPedido);
+        return itemPedidoRepository.save(itemPedidoEntity);
     }
 
-    @Transactional
-    public ItemPedido atualizar(Long id, ItemPedido itemPedidoAtualizado) {
-        ItemPedido itemExistente = buscarPorId(id);
-
-        // Não permite alterar o pedido ou o produto, apenas a quantidade
-        if (itemPedidoAtualizado.getQuantidade() <= 0) {
-            throw new BadRequestException("A quantidade deve ser maior que zero");
-        }
-
-        // Atualiza a quantidade e recalcula o valor total
-        itemExistente.setQuantidade(itemPedidoAtualizado.getQuantidade());
-        itemExistente.calcularValorTotal();
-
-        // Se o pedido está no status PENDENTE, recalcula o valor total do pedido
-        Pedido pedido = itemExistente.getPedido();
-        if (pedido != null && pedido.getStatus() == Pedido.StatusPedido.PENDENTE) {
-            pedido.recalcularValorTotal();
-        }
-
-        return itemPedidoRepository.save(itemExistente);
-    }
-
-    @Transactional
-    public void excluir(Long id) {
-        ItemPedido item = buscarPorId(id);
-
-        // Apenas permite excluir se o pedido estiver com status PENDENTE
-        Pedido pedido = item.getPedido();
-        if (pedido != null && pedido.getStatus() != Pedido.StatusPedido.PENDENTE) {
-            throw new BadRequestException("Não é possível excluir itens de um pedido que não esteja com status PENDENTE");
-        }
-
-        // Remove o item do pedido e recalcula o valor total
-        if (pedido != null) {
-            pedido.removerItem(item);
-        }
-
-        itemPedidoRepository.delete(item);
-    }
+//    @Transactional
+//    public ItemPedidoEntity atualizar(Long id, ItemPedidoEntity itemPedidoEntityAtualizado) {
+//        ItemPedidoEntity itemExistente = buscarPorId(id);
+//
+//        // Não permite alterar o pedido ou o produto, apenas a quantidade
+//        if (itemPedidoEntityAtualizado.getQuantidade() <= 0) {
+//            throw new BadRequestException("A quantidade deve ser maior que zero");
+//        }
+//
+//        // Atualiza a quantidade e recalcula o valor total
+//        itemExistente.setQuantidade(itemPedidoEntityAtualizado.getQuantidade());
+//        itemExistente.calcularValorTotal();
+//
+//        // Se o pedido está no status PENDENTE, recalcula o valor total do pedido
+//        PedidoEntity pedidoEntity = itemExistente.getPedido();
+//        if (pedidoEntity != null && pedidoEntity.getStatus() == PedidoEntity.StatusPedido.PENDENTE) {
+//            pedidoEntity.recalcularValorTotal();
+//        }
+//
+//        return itemPedidoRepository.save(itemExistente);
+//    }
+//
+//    @Transactional
+//    public void excluir(Long id) {
+//        ItemPedidoEntity item = buscarPorId(id);
+//
+//        // Apenas permite excluir se o pedido estiver com status PENDENTE
+//        PedidoEntity pedidoEntity = item.getPedido();
+//        if (pedidoEntity != null && pedidoEntity.getStatus() != PedidoEntity.StatusPedido.PENDENTE) {
+//            throw new BadRequestException("Não é possível excluir itens de um pedido que não esteja com status PENDENTE");
+//        }
+//
+//        // Remove o item do pedido e recalcula o valor total
+//        if (pedidoEntity != null) {
+//            pedidoEntity.removerItem(item);
+//        }
+//
+//        itemPedidoRepository.delete(item);
+//    }
 }
