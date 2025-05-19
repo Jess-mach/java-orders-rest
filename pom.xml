@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.sistema</groupId>
-    <artifactId>pedidoEntities</artifactId>
+    <artifactId>pedidos</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>sistema-pedidoEntities</name>
-    <description>Sistema de pedidoEntities usando Spring Boot e MySQL</description>
+    <name>sistema-pedidos</name>
+    <description>Sistema de pedidos usando Spring Boot e MySQL</description>
 
     <properties>
         <java.version>17</java.version>
