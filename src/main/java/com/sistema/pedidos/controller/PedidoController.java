@@ -6,6 +6,8 @@ import com.sistema.pedidos.service.PedidoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -21,6 +23,8 @@ import java.util.List;
 public class PedidoController {
 
     private final PedidoService pedidoService;
+
+    private static final Logger logger = LoggerFactory.getLogger(PedidoController.class);
 
     @Autowired
     public PedidoController(PedidoService pedidoService) {
@@ -67,7 +71,9 @@ public class PedidoController {
     @PostMapping
     @Operation(summary = "Criar um novo pedido", description = "Cria um novo pedido com os dados informados, incluindo seus itens")
     public ResponseEntity<PedidoEntity> criar(@Valid @RequestBody PedidoRequest request) {
+        logger.info("message=Inicio metodo criar novo pedido.");
         PedidoEntity novoPedidoEntity = pedidoService.salvar(request);
+        logger.info("message=Finalização do metodo novo pedido.");
         return ResponseEntity.status(HttpStatus.CREATED).body(novoPedidoEntity);
     }
 
