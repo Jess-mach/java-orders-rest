@@ -66,7 +66,7 @@ public class ItemPedidoService {
         return itemPedidoRepository.save(itemPedidoEntity);
     }
 
-//    @Transactional
+//    @Transactional //TODO:Remover codigo posteriormente caso não utilize
 //    public ItemPedidoEntity atualizar(Long id, ItemPedidoEntity itemPedidoEntityAtualizado) {
 //        ItemPedidoEntity itemExistente = buscarPorId(id);
 //
